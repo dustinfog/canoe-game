@@ -32,10 +32,6 @@ public class ScheduledTasklet extends Tasklet implements Comparable<ScheduledTas
         return null;
     }
 
-    public Actor getActor() {
-        return actor;
-    }
-
     public Instant getFireTime() {
         return fireTime;
     }
