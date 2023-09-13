@@ -8,25 +8,24 @@ public class Tasklet {
 
     private final Runnable runnable;
     private final Map<Object, Object> storage;
-    private final String entry;
+    private final String name;
 
     Tasklet(Runnable runnable) {
         this(runnable.getClass().getName(), runnable);
     }
 
     Tasklet(String name, Runnable runnable) {
-        this.entry = name;
+        this.name = name;
         this.runnable = runnable;
         storage = new HashMap<>();
     }
-
 
     public static Tasklet currentTasklet() {
         return current.get();
     }
 
-    public String getEntry() {
-        return entry;
+    public String getName() {
+        return name;
     }
 
     public void set(Object key, Object value) {
@@ -52,7 +51,7 @@ public class Tasklet {
 
     @Override
     public String toString() {
-        return entry + "@" + getId();
+        return name + "@" + getId();
     }
 
     public int getId() {
