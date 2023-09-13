@@ -40,13 +40,20 @@ public class ScheduledTasklet extends Tasklet implements Comparable<ScheduledTas
         return fireTime;
     }
 
-    public boolean cancel() {
+    public void cancel() {
+        if (Actor.currentActor() == actor) {
+            doCancel();
+        } else {
+            actor.execute(this::doCancel);
+        }
+    }
+
+    private void doCancel() {
         if (cancelled) {
-            return false;
+            return;
         }
         cancelled = true;
         actor.cancel(this);
-        return true;
     }
 
     public void reset(Instant fireTime) {
