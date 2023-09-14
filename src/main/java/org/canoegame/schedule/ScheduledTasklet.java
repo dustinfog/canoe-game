@@ -11,12 +11,7 @@ public class ScheduledTasklet extends Tasklet implements Comparable<ScheduledTas
 
     ScheduledTasklet(String name, Runnable runnable, Actor actor, long delay, TimeUnit unit) {
         super(name, runnable, actor);
-        var current = currentScheduledTasklet();
-        if (current != null) {
-            this.triggerTime = current.triggerTime + unit.toNanos(delay);
-        } else {
-            this.triggerTime = System.nanoTime() + unit.toNanos(delay);
-        }
+        this.assignTriggerTime(delay, unit);
     }
 
     public static @Nullable ScheduledTasklet currentScheduledTasklet() {
@@ -62,7 +57,7 @@ public class ScheduledTasklet extends Tasklet implements Comparable<ScheduledTas
 
     private void doReset(long delay, TimeUnit unit) {
         this.cancelled = false;
-        this.triggerTime = triggerTime + unit.toNanos(delay);
+        this.assignTriggerTime(delay, unit);
         getActor().reset(this);
     }
     @Override
@@ -77,5 +72,14 @@ public class ScheduledTasklet extends Tasklet implements Comparable<ScheduledTas
     @Override
     public int compareTo(@NotNull ScheduledTasklet o) {
         return Long.compare(triggerTime, o.triggerTime);
+    }
+
+    private void assignTriggerTime(long delay, TimeUnit unit) {
+        var current = currentScheduledTasklet();
+        if (current != null) {
+            this.triggerTime = current.triggerTime + unit.toNanos(delay);
+        } else {
+            this.triggerTime = System.nanoTime() + unit.toNanos(delay);
+        }
     }
 }

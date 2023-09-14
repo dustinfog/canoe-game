@@ -113,11 +113,11 @@ public class Actor implements Runnable{
             context.run(executionQueue.poll());
         }
 
-        var now = System.nanoTime();
         total = BATCH_SIZE_DELAYED;
+
         while (!scheduledQueue.isEmpty()) {
             var tasklet  = scheduledQueue.peek();
-            if (shutDownOrInFuture(tasklet, now)) {
+            if (shutDownOrInFuture(tasklet)) {
                 break;
             }
 
@@ -132,7 +132,8 @@ public class Actor implements Runnable{
         return false;
     }
 
-    private boolean shutDownOrInFuture(ScheduledTasklet tasklet, long now) {
+    private boolean shutDownOrInFuture(ScheduledTasklet tasklet) {
+        var now = System.nanoTime();
         var fireTime = tasklet.getTriggerTime();
         if (fireTime <= now) {
             return false;
