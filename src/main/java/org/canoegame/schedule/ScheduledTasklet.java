@@ -3,24 +3,20 @@ package org.canoegame.schedule;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.time.Instant;
-import java.time.temporal.TemporalAmount;
+import java.util.concurrent.TimeUnit;
 
 public class ScheduledTasklet extends Tasklet implements Comparable<ScheduledTasklet> {
-    private final Actor actor;
-    private Instant fireTime;
+    private volatile long triggerTime;
     private boolean cancelled;
 
-    ScheduledTasklet(Runnable runnable, Actor actor, Instant fireTime) {
-        super(runnable);
-        this.actor = actor;
-        this.fireTime = fireTime;
-    }
-
-    ScheduledTasklet(String name, Runnable runnable, Actor actor, Instant fireTime) {
-        super(name, runnable);
-        this.actor = actor;
-        this.fireTime = fireTime;
+    ScheduledTasklet(String name, Runnable runnable, Actor actor, long delay, TimeUnit unit) {
+        super(name, runnable, actor);
+        var current = currentScheduledTasklet();
+        if (current != null) {
+            this.triggerTime = current.triggerTime + unit.toNanos(delay);
+        } else {
+            this.triggerTime = System.nanoTime() + unit.toNanos(delay);
+        }
     }
 
     public static @Nullable ScheduledTasklet currentScheduledTasklet() {
@@ -32,11 +28,12 @@ public class ScheduledTasklet extends Tasklet implements Comparable<ScheduledTas
         return null;
     }
 
-    public Instant getFireTime() {
-        return fireTime;
+    public long getTriggerTime() {
+        return triggerTime;
     }
 
     public void cancel() {
+        var actor = getActor();
         if (Actor.currentActor() == actor) {
             doCancel();
         } else {
@@ -49,27 +46,24 @@ public class ScheduledTasklet extends Tasklet implements Comparable<ScheduledTas
             return;
         }
         cancelled = true;
-        actor.cancel(this);
+        getActor().cancel(this);
     }
 
-    public void reset(Instant fireTime) {
+    public void reset(long delay, TimeUnit unit) {
+        var actor = getActor();
         if (Actor.currentActor() == actor) {
-            doReset(fireTime);
+            doReset(delay, unit);
         } else {
             actor.execute(() -> {
-                doReset(fireTime);
+                doReset(delay, unit);
             });
         }
     }
 
-    public void reset(TemporalAmount delay) {
-        reset(Instant.now().plus(delay));
-    }
-
-    private void doReset(Instant fireTime) {
+    private void doReset(long delay, TimeUnit unit) {
         this.cancelled = false;
-        this.fireTime = fireTime;
-        actor.reset(this);
+        this.triggerTime = triggerTime + unit.toNanos(delay);
+        getActor().reset(this);
     }
     @Override
     void run() {
@@ -82,6 +76,6 @@ public class ScheduledTasklet extends Tasklet implements Comparable<ScheduledTas
 
     @Override
     public int compareTo(@NotNull ScheduledTasklet o) {
-        return fireTime.compareTo(o.fireTime);
+        return Long.compare(triggerTime, o.triggerTime);
     }
 }

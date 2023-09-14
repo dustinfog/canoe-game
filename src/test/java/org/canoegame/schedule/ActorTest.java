@@ -2,10 +2,9 @@ package org.canoegame.schedule;
 
 import junit.framework.TestCase;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 public class ActorTest extends TestCase {
@@ -46,8 +45,9 @@ public class ActorTest extends TestCase {
         });
         actor.schedule(()->{
             logger.info("world");
-            (ScheduledTasklet.currentScheduledTasklet()).reset(Duration.ofSeconds(1));
-        }, Instant.now().plus(Duration.ofSeconds(1)));
+        },
+                1,
+                TimeUnit.SECONDS);
         Thread.sleep(10000);
     }
 }

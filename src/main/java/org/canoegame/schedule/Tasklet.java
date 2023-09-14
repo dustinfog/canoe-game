@@ -9,14 +9,15 @@ public class Tasklet {
     private final Runnable runnable;
     private final Map<Object, Object> storage;
     private final String name;
+    private final Actor actor;
 
-    Tasklet(Runnable runnable) {
-        this(runnable.getClass().getName(), runnable);
-    }
-
-    Tasklet(String name, Runnable runnable) {
+    Tasklet(String name, Runnable runnable, Actor actor) {
+        if (name == null) {
+            name = runnable.getClass().getName();
+        }
         this.name = name;
         this.runnable = runnable;
+        this.actor = actor;
         storage = new HashMap<>();
     }
 
@@ -47,6 +48,10 @@ public class Tasklet {
             throw new IllegalStateException("Not current tasklet");
 
         storage.remove(key);
+    }
+
+    public Actor getActor() {
+        return actor;
     }
 
     @Override

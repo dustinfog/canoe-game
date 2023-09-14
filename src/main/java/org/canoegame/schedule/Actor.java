@@ -1,11 +1,10 @@
 package org.canoegame.schedule;
 
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.PriorityQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
@@ -23,7 +22,7 @@ public class Actor implements Runnable{
 
     private ScheduledExecutorService executor;
     private ScheduledFuture<?> nextScheduledFeature;
-    private Instant nextScheduledTime;
+    private long nextScheduledTime;
 
     public Actor(TaskletContext context, String name) {
         this.name = name;
@@ -45,33 +44,28 @@ public class Actor implements Runnable{
         return name;
     }
 
-    public void execute(Runnable runnable) {
-        executionQueue.add(new Tasklet(runnable));
-        switchToReady();
+    public Tasklet execute(Runnable runnable) {
+        return execute(null, runnable);
     }
-    public void execute(String name, Runnable runnable) {
-        executionQueue.add(new Tasklet(name, runnable));
+    public Tasklet execute(String name, Runnable runnable) {
+        var tasklet = new Tasklet(name, runnable, this);
+        executionQueue.add(tasklet);
         switchToReady();
+        return tasklet;
     }
 
-    public ScheduledTasklet schedule(Runnable runnable, Instant fireTime) {
-        var t = new ScheduledTasklet(runnable, this, fireTime);
-        execute(() -> scheduledQueue.add(t));
-        return t;
+    public ScheduledTasklet schedule(Runnable runnable, long delay, TimeUnit unit) {
+        return schedule(null, runnable, delay, unit);
     }
 
-    public ScheduledTasklet schedule(String name, Runnable runnable, Instant fireTime) {
-        var t = new ScheduledTasklet(name, runnable, this, fireTime);
+    public ScheduledTasklet schedule(String name, Runnable runnable, long delay, TimeUnit unit) {
+        var t = new ScheduledTasklet(name, runnable, this, delay, unit);
         execute(() -> scheduledQueue.add(t));
         return t;
     }
 
     void cancel(ScheduledTasklet tasklet) {
-        if (current.get() == this) {
-            scheduledQueue.remove(tasklet);
-        } else {
-            execute(() -> scheduledQueue.remove(tasklet));
-        }
+        scheduledQueue.remove(tasklet);
     }
 
     void reset(ScheduledTasklet tasklet) {
@@ -101,46 +95,71 @@ public class Actor implements Runnable{
         }finally {
             state.set(ActorState.WAIT);
             current.remove();
+
+            logger.info("Actor " + name + " hasMoreDelayed: " + hasMoreDelayed + ", executionQueue: " + executionQueue.size() + ", scheduledQueue: " + scheduledQueue.size());
             if (hasMoreDelayed || !executionQueue.isEmpty()) {
                 switchToReady();
             }
         }
     }
     private boolean doRun() {
-        for (var total = BATCH_SIZE_ASYNC; total -- > 0 && !executionQueue.isEmpty(); ) {
-            context.run(executionQueue.poll());
-        }
-
-        var now = Instant.now();
-        var total = BATCH_SIZE_DELAYED;
-        while (!scheduledQueue.isEmpty()) {
-            var tasklet  = scheduledQueue.peek();
-            var fireTime = tasklet.getFireTime();
-            var until = now.until(fireTime, ChronoUnit.MILLIS);
-
-            if (until > 0) {
-                if (nextScheduledTime != null && nextScheduledTime.compareTo(fireTime) != 0) {
-                    nextScheduledFeature.cancel(false);
-                }
-
-                nextScheduledTime = fireTime;
-                nextScheduledFeature = executor.schedule(
-                        this,
-                        until,
-                        java.util.concurrent.TimeUnit.MILLISECONDS
-                );
+        var total = BATCH_SIZE_ASYNC;
+        while (!executionQueue.isEmpty()) {
+            // 如果系统退出，则执行完所有任务
+            if (!executor.isShutdown() &&  total -- <= 0) {
                 break;
             }
 
-            if (total <= 0) {
+            context.run(executionQueue.poll());
+        }
+
+        var now = System.nanoTime();
+        total = BATCH_SIZE_DELAYED;
+        while (!scheduledQueue.isEmpty()) {
+            var tasklet  = scheduledQueue.peek();
+            if (shutDownOrInFuture(tasklet, now)) {
+                break;
+            }
+
+            if (total -- <= 0) {
                 return true;
             }
 
             scheduledQueue.remove();
             context.run(tasklet);
-            total --;
         }
 
         return false;
+    }
+
+    private boolean shutDownOrInFuture(ScheduledTasklet tasklet, long now) {
+        var fireTime = tasklet.getTriggerTime();
+        if (fireTime <= now) {
+            return false;
+        }
+
+        if (executor.isShutdown()) {
+            if (nextScheduledFeature != null) {
+                nextScheduledFeature.cancel(false);
+            }
+
+            return true;
+        }
+
+        if (nextScheduledFeature != null) {
+            if (nextScheduledTime == fireTime) {
+                return true;
+            }
+
+            nextScheduledFeature.cancel(false);
+        }
+
+        nextScheduledTime = fireTime;
+        nextScheduledFeature = executor.schedule(
+                this,
+                fireTime - now,
+                TimeUnit.NANOSECONDS);
+
+        return true;
     }
 }

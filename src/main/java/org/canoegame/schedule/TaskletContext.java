@@ -10,7 +10,7 @@ public class TaskletContext {
     }
 
     public void run(Runnable runnable) {
-        var tasklet = new Tasklet(runnable);
+        var tasklet = new Tasklet(null, runnable, Actor.currentActor());
         run(tasklet);
     }
 
