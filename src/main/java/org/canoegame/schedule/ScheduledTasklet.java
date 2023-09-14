@@ -6,7 +6,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.concurrent.TimeUnit;
 
 public class ScheduledTasklet extends Tasklet implements Comparable<ScheduledTasklet> {
-    private volatile long triggerTime;
+    private long triggerTime;
     private boolean cancelled;
 
     ScheduledTasklet(String name, Runnable runnable, Actor actor, long delay, TimeUnit unit) {
