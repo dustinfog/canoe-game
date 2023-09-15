@@ -106,7 +106,7 @@ public class Actor implements Runnable{
         var total = BATCH_SIZE_ASYNC;
         while (!executionQueue.isEmpty()) {
             // 如果系统退出，则执行完所有任务
-            if (!executor.isShutdown() &&  total -- <= 0) {
+            if (total -- <= 0 && !executor.isShutdown()) {
                 break;
             }
 
@@ -121,7 +121,7 @@ public class Actor implements Runnable{
                 break;
             }
 
-            if (total -- <= 0) {
+            if (total -- <= 0 && !executor.isShutdown()) {
                 return true;
             }
 
