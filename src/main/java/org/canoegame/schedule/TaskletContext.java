@@ -15,6 +15,10 @@ public class TaskletContext {
     }
 
     void run(Tasklet tasklet) {
+        if (Tasklet.currentTasklet() != null) {
+            throw new IllegalStateException("Already in a tasklet");
+        }
+
         if (interceptors == null) {
             tasklet.run();
             return;
