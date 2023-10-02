@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+// protoc --descriptor_set_out=test1.proto.desc test1.proto
+package protocol;
+option java_package = "org.canoegame.example";
+option  java_multiple_files = true;
+
+//import "google/protobuf/descriptor.proto";
+//
+//option java_package = "com.example.proto";
+
+message Hello {
+  string greeting = 1;
+}
