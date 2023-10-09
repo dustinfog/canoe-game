@@ -7,7 +7,7 @@ public class Tasklet {
     private static final ThreadLocal<Tasklet> current = new ThreadLocal<>();
 
     private final Runnable runnable;
-    private final Map<Object, Object> storage;
+    private final Map<TaskletLocal<?>, Object> storage;
     private final String name;
     private final Actor actor;
 
@@ -29,25 +29,16 @@ public class Tasklet {
         return name;
     }
 
-    public void set(Object key, Object value) {
-        if (currentTasklet() != this)
-            throw new IllegalStateException("Not current tasklet");
-
-        storage.put(key, value);
+    <T> void set(TaskletLocal<T> local, T value) {
+        storage.put(local, value);
     }
 
-    public Object get(Object key) {
-        if (currentTasklet() != this)
-            throw new IllegalStateException("Not current tasklet");
-
-        return storage.get(key);
+    <T> T get(TaskletLocal<T> local) {
+        return (T)storage.get(local);
     }
 
-    public void remove(Object key) {
-        if (currentTasklet() != this)
-            throw new IllegalStateException("Not current tasklet");
-
-        storage.remove(key);
+    void remove(TaskletLocal<?> local) {
+        storage.remove(local);
     }
 
     public Actor getActor() {

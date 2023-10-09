@@ -16,10 +16,13 @@ public class TaskletContextTest extends TestCase {
 
     public void testTestRun() {
         TaskletContext context = new TaskletContext();
+        TaskletLocal<String> var = new TaskletLocal<>();
+
         var interceptors = new ArrayList<Interceptor>();
         interceptors.add(new Interceptor() {
             @Override
             public boolean beforeRun(Tasklet tasklet) {
+                var.set("value");
                 return true;
             }
 
@@ -40,10 +43,7 @@ public class TaskletContextTest extends TestCase {
         });
         context.setInterceptors(interceptors);
         context.run(() -> {
-            var task = Tasklet.currentTasklet();
-            task.set("key", "value");
-
-            assertEquals("value", task.get("key"));
+            assertEquals("value", var.get());
         });
     }
 }
