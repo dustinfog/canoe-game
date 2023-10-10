@@ -12,10 +12,11 @@ public class TaskletLocal<T> {
         this.supplier = null;
     }
     public T get() {
-        var v = Tasklet.currentTasklet().get(this);
+        var tasklet = Tasklet.currentTasklet();
+        var v = tasklet.get(this);
         if (v == null && supplier != null) {
             v = supplier.get();
-            Tasklet.currentTasklet().set(this, v);
+            tasklet.set(this, v);
         }
 
         return v;
