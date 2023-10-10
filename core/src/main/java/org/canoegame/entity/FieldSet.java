@@ -20,25 +20,22 @@ public class FieldSet<F extends Enum<F>&Field> extends AbstractSet<F> implements
     }
 
     private F[] getUniverse() {
-        var ret = universes.get(elementType);
-        if (ret != null) {
-            return (F[]) ret;
-        }
-
-        var all = elementType.getEnumConstants();
-        var max = 0;
-        for (F f : all) {
-            if (f.getNumber() > max) {
-                max = f.getNumber();
+        var ret = universes.computeIfAbsent(elementType, k -> {
+            var all = elementType.getEnumConstants();
+            var max = 0;
+            for (F f : all) {
+                if (f.getNumber() > max) {
+                    max = f.getNumber();
+                }
             }
-        }
 
-        ret = new Enum[max + 1];
-        for (F f : all) {
-            ret[f.getNumber()] = f;
-        }
+            var value = new Enum[max + 1];
+            for (F f : all) {
+                value[f.getNumber()] = f;
+            }
+            return value;
+        });
 
-        universes.put(elementType, ret);
         return (F[]) ret;
     }
 
