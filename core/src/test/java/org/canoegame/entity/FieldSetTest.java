@@ -1,4 +1,4 @@
-package org.canoegame.orm;
+package org.canoegame.entity;
 
 import junit.framework.TestCase;
 
@@ -115,10 +115,27 @@ public class FieldSetTest extends TestCase {
         assertFalse(fs2.equals(fs1));
     }
 
+    public void testTestClone() {
+        FieldSet<TestField> fs1 = new FieldSet<>(TestField.class);
+        fs1.add(TestField.ID);
+        fs1.add(TestField.Name);
+
+        FieldSet<TestField> fs2 = fs1.clone();
+        assertTrue(fs1.equals(fs2));
+        assertTrue(fs2.equals(fs1));
+        assertTrue(fs1.equals(fs1));
+        assertTrue(fs2.equals(fs2));
+
+        fs2.remove(TestField.Name);
+        assertFalse(fs1.equals(fs2));
+        assertFalse(fs2.equals(fs1));
+    }
+
 
     private enum TestField implements Field {
         ID(1),
-        Name(2);
+        Name(2),
+        Sex(3);
 
         TestField(int number) {
             this.number = number;

@@ -1,4 +1,4 @@
-package org.canoegame.orm;
+package org.canoegame.entity;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -6,14 +6,25 @@ import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentHashMap;
 
-public class FieldSet<F extends Enum<F>&Field> extends AbstractSet<F> {
+public class FieldSet<F extends Enum<F>&Field> extends AbstractSet<F> implements Cloneable {
     private final Class<F> elementType;
+    private final static ConcurrentHashMap<Class<? extends Enum<?>>, Enum<?>[]> universes = new ConcurrentHashMap<>();
     private final F[] universe;
     private long elements = 0L;
 
-    FieldSet(Class<F> elementType) {
+    public FieldSet(Class<F> elementType) {
         this.elementType = elementType;
+        universe = getUniverse();
+    }
+
+    private F[] getUniverse() {
+        var ret = universes.get(elementType);
+        if (ret != null) {
+            return (F[]) ret;
+        }
+
         var all = elementType.getEnumConstants();
         var max = 0;
         for (F f : all) {
@@ -22,12 +33,15 @@ public class FieldSet<F extends Enum<F>&Field> extends AbstractSet<F> {
             }
         }
 
-        var tmp = new Enum[max + 1];
+        ret = new Enum[max + 1];
         for (F f : all) {
-            tmp[f.getNumber()] = f;
+            ret[f.getNumber()] = f;
         }
-        universe = (F[]) tmp;
+
+        universes.put(elementType, ret);
+        return (F[]) ret;
     }
+
 
     public int size() {
         return Long.bitCount(elements);
@@ -110,6 +124,11 @@ public class FieldSet<F extends Enum<F>&Field> extends AbstractSet<F> {
         return (es.elements & ~elements) == 0;
     }
 
+    public FieldSet<F> addAll() {
+        elements = ~0L;
+        return this;
+    }
+
     public boolean addAll(Collection<? extends F> c) {
         if (!(c instanceof FieldSet<?> es))
             return super.addAll(c);
@@ -156,6 +175,14 @@ public class FieldSet<F extends Enum<F>&Field> extends AbstractSet<F> {
 
     public void clear() {
         elements = 0;
+    }
+
+    public FieldSet<F> clone() {
+        try {
+            return (FieldSet<F>) super.clone();
+        } catch (CloneNotSupportedException e) {
+            throw new InternalError(e);
+        }
     }
 
     public boolean equals(Object o) {
