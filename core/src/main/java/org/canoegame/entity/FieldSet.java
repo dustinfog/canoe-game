@@ -16,10 +16,10 @@ public class FieldSet<F extends Enum<F>&Field> extends AbstractSet<F> implements
 
     public FieldSet(Class<F> elementType) {
         this.elementType = elementType;
-        universe = getUniverse();
+        universe = getUniverse(elementType);
     }
 
-    private F[] getUniverse() {
+    private static <F extends Enum<F>&Field> F[] getUniverse(Class<F> elementType) {
         var ret = universes.computeIfAbsent(elementType, k -> {
             var all = elementType.getEnumConstants();
             var max = 0;
