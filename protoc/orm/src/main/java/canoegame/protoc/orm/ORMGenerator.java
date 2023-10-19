@@ -6,7 +6,7 @@ import com.salesforce.jprotoc.Generator;
 import com.salesforce.jprotoc.GeneratorException;
 import com.salesforce.jprotoc.ProtoTypeMap;
 import com.salesforce.jprotoc.ProtocPlugin;
-import org.canoegame.orm.Extension;
+import org.canoegame.entity.Extension;
 
 import java.util.ArrayList;
 import java.util.Collections;

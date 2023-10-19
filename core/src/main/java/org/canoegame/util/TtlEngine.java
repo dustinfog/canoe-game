@@ -2,12 +2,14 @@ package org.canoegame.util;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.function.Consumer;
+
 public class TtlEngine<V> {
     private final long ttl;
     private Node<V> head;
-    private final ExpireHandler<V> expireHandler;
+    private final Consumer<V> expireHandler;
 
-    public TtlEngine(long ttl, ExpireHandler<V> expireHandler) {
+    public TtlEngine(long ttl, Consumer<V> expireHandler) {
         this.ttl = ttl;
         this.expireHandler = expireHandler;
     }
@@ -82,7 +84,7 @@ public class TtlEngine<V> {
         while (tail != null && System.currentTimeMillis() - tail.accessTime > ttl) {
             tail.list = null;
             if (expireHandler != null) {
-                expireHandler.onExpire(tail.value);
+                expireHandler.accept(tail.value);
             }
 
             if (tail == head) {
@@ -97,10 +99,6 @@ public class TtlEngine<V> {
             tail.next = head;
             head.prev = tail;
         }
-    }
-
-    public interface ExpireHandler<V> {
-        void onExpire(V value);
     }
 
     public static class Node<V> {

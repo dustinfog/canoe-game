@@ -134,9 +134,7 @@ public class FieldSetTest extends TestCase {
 
     private enum TestField implements Field {
         ID(1),
-        Name(2),
-        Sex(3);
-
+        Name(2);
         TestField(int number) {
             this.number = number;
         }

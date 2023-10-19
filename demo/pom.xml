@@ -20,6 +20,11 @@
             <version>0.1</version>
         </dependency>
         <dependency>
+            <groupId>canoe-game</groupId>
+            <artifactId>canoe-core</artifactId>
+            <version>0.1</version>
+        </dependency>
+        <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
             <version>3.22.2</version>
