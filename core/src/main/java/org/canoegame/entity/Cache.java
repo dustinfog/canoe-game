@@ -13,8 +13,8 @@ public class Cache<E extends Entity<E, ?>> {
     private static final int CONCURRENCY_LEVEL = 10;
     private final Prefix<E> prefix;
     private final Group<E>[] groups;
-    Cache(boolean useManualCache) {
-        if (useManualCache) {
+    Cache(boolean canonical) {
+        if (canonical) {
             this.prefix = new ManualPrefix<>();
         } else {
             this.prefix = new TtlPrefix<>(1000);
