@@ -81,7 +81,8 @@ public class TtlEngine<V> {
         }
 
         var tail = head.prev;
-        while (tail != null && System.currentTimeMillis() - tail.accessTime > ttl) {
+        var now = System.currentTimeMillis();
+        while (tail != null && now - tail.accessTime > ttl) {
             tail.list = null;
             if (expireHandler != null) {
                 expireHandler.accept(tail.value);

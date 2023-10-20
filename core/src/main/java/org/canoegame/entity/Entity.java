@@ -174,6 +174,8 @@ abstract public class Entity<E extends Entity<E, F>, F extends Enum<F>&Field> im
 
     abstract protected void incrementRevision();
 
+    abstract public int getRevision();
+
     @Override
     public E clone() {
         try {

@@ -1,26 +1,38 @@
 package org.canoegame.entity;
 
 public class EntityHolder<V>  {
+    private final Key<V> key;
     private volatile V value;
-    private boolean expiring;
+    private State state = State.UNCACHED;
 
-    EntityHolder(V value, boolean expiring) {
+    EntityHolder(Key<V> key, V value) {
+        this.key = key;
         this.value = value;
-        this.expiring = expiring;
     }
+
     public V get() {
         return value;
+    }
+
+    public Key<V> getKey() {
+        return key;
     }
 
     void set(V value) {
         this.value = value;
     }
 
-    void setExpiring(boolean v) {
-        expiring = v;
+    State getState() {
+        return state;
     }
 
-    boolean isExpiring() {
-        return expiring;
+    void setState(State state) {
+        this.state = state;
+    }
+
+    enum State {
+        UNCACHED,
+        MANUAL,
+        EXPIRING,
     }
 }

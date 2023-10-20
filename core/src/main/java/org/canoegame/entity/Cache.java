@@ -1,6 +1,7 @@
 package org.canoegame.entity;
 
 import org.canoegame.util.TtlEngine;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,46 +12,102 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Cache<E extends Entity<E, ?>> {
     private static final int CONCURRENCY_LEVEL = 10;
+//    public static final long DEFAULT_TTL = TimeUnit.MINUTES.toMillis(30);
+
     private final Prefix<E> prefix;
     private final Group<E>[] groups;
-    Cache(boolean canonical) {
+
+    private final Class<E> elementType;
+
+    private final boolean canonical;
+
+    Cache(Class<E> elementType, long ttl, boolean canonical) {
+        this.elementType = elementType;
+        this.canonical = canonical;
+
         if (canonical) {
             this.prefix = new ManualPrefix<>();
         } else {
-            this.prefix = new TtlPrefix<>(1000);
+            var prefixTtl = (int)((float)(ttl) * 0.8);
+            this.prefix = new TtlPrefix<>(prefixTtl);
         }
 
         groups = new Group[CONCURRENCY_LEVEL];
+        for (var i = 0; i < CONCURRENCY_LEVEL; i ++) {
+            groups[i] = new Group<>(ttl);
+        }
     }
 
     public EntityHolder<E> get(Key<E> key) {
         var group = getGroup(key);
-        return group.get(key);
+        if (group == null) {
+            return null;
+        }
+
+        return group.get(key, prefix.exists(key, false));
     }
 
-    public EntityHolder<E> getAll(Key<E> prefixKey) {
+    public List<EntityHolder<E>> getAll(Key<E> prefixKey) {
         if (prefix.exists(prefixKey, true)) {
             return null;
         }
 
         var group = getGroup(prefixKey);
         if (group != null) {
+            group.getAll(prefixKey, canonical);
         }
-        return null;
+
+        List<EntityHolder<E>> all = new ArrayList<>();
+        for (var g : groups) {
+            all.addAll(g.getAll(prefixKey, canonical));
+        }
+
+        return all;
     }
 
-    public EntityHolder<E> putOnFetch(Key<E> key, E value, boolean expiring) {
+    public EntityHolder<E> putNullIfAbsent(@NotNull Key<E> key) {
         var group = getGroup(key);
+        if (group == null) {
+            return null;
+        }
+
+        return group.get(key, true);
+    }
+
+    public EntityHolder<E> putOnFetch(@NotNull E value, boolean expiring) {
+        if (canonical && expiring) {
+            throw new IllegalArgumentException("Canonical cache cannot be expiring");
+        }
+
+        this.typeCheck(value);
+        var key = value.getKey();
+        var group = getGroup(key);
+        if (group == null) {
+            return null;
+        }
         return group.putOnFetch(key, value, expiring);
     }
 
-    public EntityHolder<E> putOnStore(Key<E> key, E value, boolean expiring) {
+    public EntityHolder<E> putOnStore(@NotNull E value, boolean expiring) {
+        if (canonical && expiring) {
+            throw new IllegalArgumentException("Canonical cache cannot be expiring");
+        }
+
+        this.typeCheck(value);
+        var key = value.getKey();
         var group = getGroup(key);
+        if (group == null) {
+            return null;
+        }
         return group.putOnStore(key, value, expiring);
     }
 
-    public void putOnDelete(Key<E> key) {
+    public void putOnDelete(E value) {
+        var key = value.getKey();
         var group = getGroup(key);
+        if (group == null) {
+            return;
+        }
         group.putOnDelete(key);
     }
 
@@ -60,6 +117,12 @@ public class Cache<E extends Entity<E, ?>> {
             return null;
         }
         return groups[groupCode%CONCURRENCY_LEVEL];
+    }
+
+    final void typeCheck(E e) {
+        Class<?> eClass = e.getClass();
+        if (eClass != elementType && eClass.getSuperclass() != elementType)
+            throw new ClassCastException(eClass + " != " + elementType);
     }
 
     static class Group<E extends Entity<E, ?>> {
@@ -74,7 +137,7 @@ public class Cache<E extends Entity<E, ?>> {
             lock = new ReentrantReadWriteLock();
         }
 
-        public EntityHolder<E> get(Key<E> key) {
+        public EntityHolder<E> get(Key<E> key, boolean putNullIfAbsent) {
             lock.readLock().lock();
             try {
                 var ret = manual.get(key);
@@ -92,7 +155,18 @@ public class Cache<E extends Entity<E, ?>> {
                     return ret;
                 }
 
-                return ttl.get(key, false);
+                ret = ttl.get(key, false);
+                if (ret != null) {
+                    return ret;
+                }
+
+                if (putNullIfAbsent) {
+                    ret = new EntityHolder<>(key, null);
+                    ttl.put(ret);
+                    return ret;
+                }
+
+                return null;
             } finally {
                 lock.writeLock().unlock();
             }
@@ -126,7 +200,7 @@ public class Cache<E extends Entity<E, ?>> {
                     return put(key, value, expiring);
                 }
 
-                switchExpiring(key, orig, expiring);
+                switchStore(orig, expiring);
                 return orig;
             } finally {
                 lock.writeLock().unlock();
@@ -142,7 +216,7 @@ public class Cache<E extends Entity<E, ?>> {
                 }
 
                 orig.set(value);
-                switchExpiring(key, orig, expiring);
+                switchStore(orig, expiring);
                 return orig;
             } finally {
                 lock.writeLock().unlock();
@@ -154,11 +228,11 @@ public class Cache<E extends Entity<E, ?>> {
             try {
                 var orig = peek(key);
                 if (orig == null) {
-                    return;
+                   ttl.put(new EntityHolder<>(key, null));
                 }
 
                 orig.set(null);
-                switchExpiring(key, orig, true);
+                switchStore(orig, true);
             } finally {
                 lock.writeLock().unlock();
             }
@@ -173,23 +247,26 @@ public class Cache<E extends Entity<E, ?>> {
             return ttl.get(key, true);
         }
 
-        private void switchExpiring(Key<E> key, EntityHolder<E> holder, boolean expiring) {
+        private void switchStore(EntityHolder<E> holder, boolean expiring) {
+            var state = holder.getState();
+            if (state == EntityHolder.State.UNCACHED) {
+                throw new IllegalStateException("Entity not cached");
+            }
+
             if (expiring) {
-                if (holder.isExpiring()) {
+                if (holder.getState() == EntityHolder.State.EXPIRING) {
                     return;
                 }
 
-                manual.remove(key);
-                holder.setExpiring(true);
-                ttl.put(key, holder);
+                manual.remove(holder.getKey());
+                ttl.put(holder);
             } else {
-                if (!holder.isExpiring()) {
+                if (holder.getState() == EntityHolder.State.MANUAL) {
                     return;
                 }
 
-                ttl.remove(key);
-                holder.setExpiring(false);
-                manual.put(key, holder);
+                ttl.remove(holder.getKey());
+                manual.put(holder);
             }
         }
 
@@ -211,8 +288,8 @@ public class Cache<E extends Entity<E, ?>> {
         public EntityHolder<E> put(Key<E> key, E value) {
             var holder = store.get(key);
             if (holder == null) {
-                holder = new EntityHolder<>(value, false);
-                store.put(key, holder);
+                holder = new EntityHolder<>(key, value);
+                put(holder);
             } else {
                 holder.set(value);
             }
@@ -220,12 +297,15 @@ public class Cache<E extends Entity<E, ?>> {
             return holder;
         }
 
-        public void put(Key<E> key, EntityHolder<E> holder) {
+        public void put(EntityHolder<E> holder) {
+            var key = holder.getKey();
+            holder.setState(EntityHolder.State.MANUAL);
             store.put(key, holder);
         }
 
-        public EntityHolder<E> remove(Key<E> key) {
-            return store.remove(key);
+        public void remove(Key<E> key) {
+            var holder = store.remove(key);
+            holder.setState(EntityHolder.State.UNCACHED);
         }
 
         public int size() {
@@ -253,7 +333,10 @@ public class Cache<E extends Entity<E, ?>> {
 
         Ttl(long ttl) {
             store = new TreeMap<>();
-            engine = new TtlEngine<>(ttl, (v) -> store.remove(v.get().getKey()));
+            engine = new TtlEngine<>(ttl, (v) -> {
+                v.set(null);
+                store.remove(v.getKey());
+            });
         }
 
         public EntityHolder<E> get(Key<E> key, boolean peek) {
@@ -276,8 +359,8 @@ public class Cache<E extends Entity<E, ?>> {
             var node = store.get(key);
             EntityHolder<E>  holder;
             if (node == null) {
-                holder = new EntityHolder<>(value, true);
-                store.put(key, engine.add(holder));
+                holder = new EntityHolder<>(key, value);
+                put(holder);
             } else {
                 holder = node.getValue();
                 holder.set(value);
@@ -286,20 +369,20 @@ public class Cache<E extends Entity<E, ?>> {
             return holder;
         }
 
-
-        public void put(Key<E> key, EntityHolder<E> holder) {
+        public void put(EntityHolder<E> holder) {
+            var key = holder.getKey();
+            holder.setState(EntityHolder.State.EXPIRING);
             store.put(key, engine.add(holder));
         }
 
-
-        public EntityHolder<E> remove(Key<E> key) {
+        public void remove(Key<E> key) {
             var node = store.remove(key);
             if (node == null) {
-                return null;
+                return;
             }
 
             engine.remove(node);
-            return node.getValue();
+            node.getValue().setState(EntityHolder.State.UNCACHED);
         }
 
         public int size() {
@@ -322,6 +405,7 @@ public class Cache<E extends Entity<E, ?>> {
 
             return all;
         }
+
     }
 
     interface Prefix<E> {
