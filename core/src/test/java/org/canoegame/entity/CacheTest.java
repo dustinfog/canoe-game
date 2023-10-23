@@ -24,6 +24,14 @@ public class CacheTest extends TestCase {
             key = Key.create(key1, key2);
         }
 
+        public int getKey1() {
+            return key1;
+        }
+
+        public int getKey2() {
+            return key2;
+        }
+
         public void setField1(int v) {
             validateWrite();
             Change(Field.FIELD_1);
@@ -200,10 +208,18 @@ public class CacheTest extends TestCase {
         cache.putOnStore(e3, false);
 
         var all = cache.getAll(MockEntity.Key.createPrefix(1));
+        assertNull(all);
+
+        cache.putPrefix(MockEntity.Key.createPrefix(1));
+        all = cache.getAll(MockEntity.Key.createPrefix(1));
         assertSame(3, all.size());
         assertSame(e1, all.get(0).get());
         assertSame(e2, all.get(1).get());
         assertSame(e3, all.get(2).get());
+
+        var key = MockEntity.Key.create(1, 8);
+        assertNotNull(cache.get(key));
+        assertNull(cache.get(key).get());
     }
 
     public void testPutOnFetch() {
@@ -225,7 +241,7 @@ public class CacheTest extends TestCase {
             fail("Expected exception not thrown");
         }
         var holder2 = cache.get(e2.key);
-        assertEquals(e2, holder2.get());
+        assertSame(e1, holder2.get());
     }
 
     public void testPutOnStore() {
@@ -251,6 +267,16 @@ public class CacheTest extends TestCase {
     }
 
     public void testPutOnDelete() {
+        var cache = new Cache<>(MockEntity.class, TimeUnit.SECONDS.toMillis(1), true);
+
+        var e1 = new MockEntity(1, 2);
+        cache.putOnStore(e1, false);
+
+        assertEquals(e1, cache.get(e1.key).get());
+
+        cache.putOnDelete(e1);
+        assertNotNull(cache.get(e1.key));
+        assertNull(cache.get(e1.key).get());
     }
 
     class MockStringKey implements Key<Integer> {

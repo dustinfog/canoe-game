@@ -48,7 +48,7 @@ public class Cache<E extends Entity<E, ?>> {
     }
 
     public List<EntityHolder<E>> getAll(Key<E> prefixKey) {
-        if (prefix.exists(prefixKey, true)) {
+        if (!prefix.exists(prefixKey, true)) {
             return null;
         }
 
@@ -63,6 +63,10 @@ public class Cache<E extends Entity<E, ?>> {
         }
 
         return all;
+    }
+
+    public void putPrefix(Key<E> key) {
+        prefix.add(key);
     }
 
     public EntityHolder<E> putNullIfAbsent(@NotNull Key<E> key) {
@@ -200,7 +204,6 @@ public class Cache<E extends Entity<E, ?>> {
                     return put(key, value, expiring);
                 }
 
-                switchStore(orig, expiring);
                 return orig;
             } finally {
                 lock.writeLock().unlock();
