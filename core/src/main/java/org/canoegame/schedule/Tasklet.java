@@ -29,15 +29,15 @@ public class Tasklet {
         return name;
     }
 
-    <T> void set(TaskletLocal<T> local, T value) {
+    <T> void localSet(TaskletLocal<T> local, T value) {
         storage.put(local, value);
     }
 
-    <T> T get(TaskletLocal<T> local) {
+    <T> T localGet(TaskletLocal<T> local) {
         return (T)storage.get(local);
     }
 
-    void remove(TaskletLocal<?> local) {
+    void localRemove(TaskletLocal<?> local) {
         storage.remove(local);
     }
 

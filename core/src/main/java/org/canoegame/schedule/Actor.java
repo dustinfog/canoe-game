@@ -1,5 +1,7 @@
 package org.canoegame.schedule;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -8,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
-public class Actor implements Runnable{
+public class Actor implements Runnable {
     private final static Logger logger = Logger.getLogger(Actor.class.getName());
     public static final int BATCH_SIZE_ASYNC = 256;
     public static final int BATCH_SIZE_DELAYED = 64; // n*lg(n) < 256
@@ -24,12 +26,15 @@ public class Actor implements Runnable{
     private ScheduledFuture<?> nextScheduledFeature;
     private long nextScheduledTime;
 
+    private final Map<ActorLocal<?>, Object> storage;
+
     public Actor(TaskletContext context, String name) {
         this.name = name;
         this.context = context;
         state = new AtomicReference<>(ActorState.WAIT);
         scheduledQueue = new PriorityQueue<>();
         executionQueue = new ConcurrentLinkedQueue<>();
+        storage = new HashMap<>();
     }
 
     public void setExecutor(ScheduledExecutorService executor) {
@@ -47,6 +52,7 @@ public class Actor implements Runnable{
     public Tasklet execute(Runnable runnable) {
         return execute(null, runnable);
     }
+
     public Tasklet execute(String name, Runnable runnable) {
         var tasklet = new Tasklet(name, runnable, this);
         executionQueue.add(tasklet);
@@ -92,7 +98,7 @@ public class Actor implements Runnable{
             hasMoreDelayed = doRun();
         } catch (Throwable e) {
             logger.warning("Actor " + name + " got exception: " + e);
-        }finally {
+        } finally {
             state.set(ActorState.WAIT);
             current.remove();
 
@@ -102,11 +108,12 @@ public class Actor implements Runnable{
             }
         }
     }
+
     private boolean doRun() {
         var total = BATCH_SIZE_ASYNC;
         while (!executionQueue.isEmpty()) {
             // 如果系统退出，则执行完所有任务
-            if (total -- <= 0 && !executor.isShutdown()) {
+            if (total-- <= 0 && !executor.isShutdown()) {
                 break;
             }
 
@@ -116,12 +123,12 @@ public class Actor implements Runnable{
         total = BATCH_SIZE_DELAYED;
 
         while (!scheduledQueue.isEmpty()) {
-            var tasklet  = scheduledQueue.peek();
+            var tasklet = scheduledQueue.peek();
             if (shutDownOrInFuture(tasklet)) {
                 break;
             }
 
-            if (total -- <= 0 && !executor.isShutdown()) {
+            if (total-- <= 0 && !executor.isShutdown()) {
                 return true;
             }
 
@@ -162,5 +169,18 @@ public class Actor implements Runnable{
                 TimeUnit.NANOSECONDS);
 
         return true;
+    }
+
+
+    <T> void localSet(ActorLocal<T> local, T value) {
+        storage.put(local, value);
+    }
+
+    <T> T localGet(ActorLocal<T> local) {
+        return (T) storage.get(local);
+    }
+
+    public <T> void localRemove(ActorLocal<T> local) {
+        storage.remove(local);
     }
 }
