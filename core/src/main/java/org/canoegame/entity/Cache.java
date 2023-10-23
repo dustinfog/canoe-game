@@ -232,6 +232,7 @@ public class Cache<E extends Entity<E, ?>> {
                 var orig = peek(key);
                 if (orig == null) {
                    ttl.put(new EntityHolder<>(key, null));
+                   return;
                 }
 
                 orig.set(null);
