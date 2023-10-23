@@ -195,7 +195,7 @@ public class CacheTest extends TestCase {
         assertSame(holder, holder3);
     }
 
-    public void testGetAll() {
+    public void testGetAll() throws InterruptedException {
         var cache = new Cache<>(MockEntity.class, TimeUnit.SECONDS.toMillis(1), true);
 
         var e1 = new MockEntity(1, 2);
@@ -206,6 +206,7 @@ public class CacheTest extends TestCase {
 
         var e3 = new MockEntity(1, 4);
         cache.putOnStore(e3, false);
+
 
         var all = cache.getAll(MockEntity.Key.createPrefix(1));
         assertNull(all);
@@ -220,6 +221,24 @@ public class CacheTest extends TestCase {
         var key = MockEntity.Key.create(1, 8);
         assertNotNull(cache.get(key));
         assertNull(cache.get(key).get());
+
+        var e4 = new MockEntity(2, 1);
+        cache.putOnStore(e4, false);
+        cache.putPrefix(MockEntity.Key.createPrefix(2));
+        var all2 = cache.getAll(MockEntity.Key.createPrefix(2));
+        assertSame(1, all2.size());
+
+
+        cache = new Cache<>(MockEntity.class, TimeUnit.SECONDS.toMillis(1), false);
+        cache.putOnStore(e1, true);
+        cache.putOnStore(e2, true);
+        cache.putOnStore(e3, true);
+        cache.putPrefix(MockEntity.Key.createPrefix(1));
+        var all3 = cache.getAll(MockEntity.Key.createPrefix(1));
+        assertSame(3, all3.size());
+        Thread.sleep(1000);
+        var all4 = cache.getAll(MockEntity.Key.createPrefix(1));
+        assertNull(all4);
     }
 
     public void testPutOnFetch() {
