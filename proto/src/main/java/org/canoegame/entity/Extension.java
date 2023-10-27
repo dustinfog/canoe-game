@@ -7,7 +7,6 @@ public final class Extension {
   private Extension() {}
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistryLite registry) {
-    registry.add(org.canoegame.entity.Extension.javaBasePackage);
     registry.add(org.canoegame.entity.Extension.database);
     registry.add(org.canoegame.entity.Extension.table);
     registry.add(org.canoegame.entity.Extension.pk);
@@ -18,17 +17,6 @@ public final class Extension {
     registerAllExtensions(
         (com.google.protobuf.ExtensionRegistryLite) registry);
   }
-  public static final int JAVA_BASE_PACKAGE_FIELD_NUMBER = 70001;
-  /**
-   * <code>extend .google.protobuf.FileOptions { ... }</code>
-   */
-  public static final
-    com.google.protobuf.GeneratedMessage.GeneratedExtension<
-      com.google.protobuf.DescriptorProtos.FileOptions,
-      java.lang.String> javaBasePackage = com.google.protobuf.GeneratedMessage
-          .newFileScopedGeneratedExtension(
-        java.lang.String.class,
-        null);
   public static final int DATABASE_FIELD_NUMBER = 71001;
   /**
    * <code>extend .google.protobuf.MessageOptions { ... }</code>
@@ -71,24 +59,21 @@ public final class Extension {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\017extension.proto\022\003orm\032 google/protobuf/" +
-      "descriptor.proto:9\n\021java_base_package\022\034." +
-      "google.protobuf.FileOptions\030\361\242\004 \001(\t:3\n\010d" +
-      "atabase\022\037.google.protobuf.MessageOptions" +
-      "\030\331\252\004 \001(\t:0\n\005table\022\037.google.protobuf.Mess" +
-      "ageOptions\030\332\252\004 \001(\t:+\n\002pk\022\035.google.protob" +
-      "uf.FieldOptions\030\301\262\004 \001(\010B\023\n\021org.canoegame" +
-      ".ormb\006proto3"
+      "\n\017extension.proto\022\006entity\032 google/protob" +
+      "uf/descriptor.proto:3\n\010database\022\037.google" +
+      ".protobuf.MessageOptions\030\331\252\004 \001(\t:0\n\005tabl" +
+      "e\022\037.google.protobuf.MessageOptions\030\332\252\004 \001" +
+      "(\t:+\n\002pk\022\035.google.protobuf.FieldOptions\030" +
+      "\301\262\004 \001(\010B\026\n\024org.canoegame.entityb\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.google.protobuf.DescriptorProtos.getDescriptor(),
         });
-    javaBasePackage.internalInit(descriptor.getExtensions().get(0));
-    database.internalInit(descriptor.getExtensions().get(1));
-    table.internalInit(descriptor.getExtensions().get(2));
-    pk.internalInit(descriptor.getExtensions().get(3));
+    database.internalInit(descriptor.getExtensions().get(0));
+    table.internalInit(descriptor.getExtensions().get(1));
+    pk.internalInit(descriptor.getExtensions().get(2));
     com.google.protobuf.DescriptorProtos.getDescriptor();
   }
 

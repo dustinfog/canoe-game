@@ -11,7 +11,7 @@
     <packaging>pom</packaging>
     <name>protoc</name>
     <modules>
-        <module>orm</module>
+        <module>entity</module>
     </modules>
     <dependencies>
         <dependency>

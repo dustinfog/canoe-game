@@ -3,7 +3,7 @@ syntax = "proto3";
 // protoc --descriptor_set_out=test.proto.desc test.proto
 package protocol;
 option java_package = "org.canoegame.example";
-option  java_multiple_files = true;
+option java_multiple_files = true;
 
 import "extension.proto";
 import "test1.proto";
@@ -15,7 +15,7 @@ enum PhoneType {
 }
 
 message Person {
-  option (orm.database) = "haha";
+  option (entity.database) = "haha";
   string name = 1;
   int32 id = 2;
   string email = 3;

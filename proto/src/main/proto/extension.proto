@@ -1,13 +1,13 @@
 syntax = "proto3";
 
-package orm;
-option java_package = "org.canoegame.orm";
+package entity;
+option java_package = "org.canoegame.entity";
 
 import "google/protobuf/descriptor.proto";
 
-extend google.protobuf.FileOptions {
-  string java_base_package = 70001;
-}
+//extend google.protobuf.FileOptions {
+//  string java_base_package = 70001;
+//}
 
 extend google.protobuf.MessageOptions {
   string database = 71001;

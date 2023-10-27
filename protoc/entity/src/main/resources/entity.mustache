@@ -1,0 +1,63 @@
+package {{pkg}}
+
+import org.canoegame.entity.Entity;
+import org.canoegame.entity.Commitment;
+import org.canoegame.entity.FieldSet;
+import org.canoegame.entity.Key;
+
+abstract public class {{message.name}}EntityBase<E extends {{message.name}}EntityBase<E>> extends Entity<E, {{message.name}}EntityBase.Field> {
+
+    @Override
+    protected Commitment createCommitment(FieldSet<Field> changes) {
+        return null;
+    }
+
+    public enum Field implements org.canoegame.entity.Field {
+        {{#fields}}
+            {{upperName}}("{{name}}", {{number}}),
+        {{/fields}}
+        ;
+
+        private final String fieldName;
+        private final int number;
+
+        Field(String fieldName, int number) {
+            this.fieldName = fieldName;
+            this.number = number;
+        }
+
+        public String getFieldName() {
+            return fieldName;
+        }
+
+        @Override
+        public String toString() {
+            return fieldName;
+        }
+
+        @Override
+        public int getNumber() {
+            return number;
+        }
+    }
+
+    @Override
+    public Key<E> getKey() {
+        return null;
+    }
+
+    @Override
+    protected Class<Field> getFieldClass() {
+        return Field.class;
+    }
+
+    @Override
+    protected void incrementRevision() {
+
+    }
+
+    @Override
+    public int getRevision() {
+        return 0;
+    }
+}

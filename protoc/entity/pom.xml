@@ -7,7 +7,7 @@
     <version>0.1</version>
   </parent>
 
-  <artifactId>protoc-orm</artifactId>
+  <artifactId>protoc-entity</artifactId>
   <version>0.1</version>
   <packaging>jar</packaging>
 

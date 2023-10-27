@@ -1,4 +1,4 @@
-package canoegame.protoc.orm;
+package canoegame.protoc.entity;
 
 import com.google.common.base.Strings;
 import com.google.protobuf.compiler.PluginProtos;
@@ -13,14 +13,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
-public class ORMGenerator extends Generator {
+public class EntityGenerator extends Generator {
     public static void main(String[] args) {
         if (args.length == 0) {
             // Generate from protoc via stdin
-            ProtocPlugin.generate(List.of(new ORMGenerator()), List.of(Extension.database));
+            ProtocPlugin.generate(List.of(new EntityGenerator()), List.of(Extension.database));
         } else {
             // Process from a descriptor_dump file via command line arg
-            ProtocPlugin.debug(List.of(new ORMGenerator()), List.of(Extension.database), args[0]);
+            ProtocPlugin.debug(List.of(new EntityGenerator()), List.of(Extension.database), args[0]);
         }
     }
 
@@ -33,15 +33,8 @@ public class ORMGenerator extends Generator {
     public Stream<PluginProtos.CodeGeneratorResponse.File> generate(PluginProtos.CodeGeneratorRequest request)
             throws GeneratorException {
 
-        // create a map from proto types to java types
         final ProtoTypeMap protoTypeMap = ProtoTypeMap.of(request.getProtoFileList());
 
-        // set context attributes by extracting values from the request
-        // use protoTypeMap to translate between proto types and java types
-
-        // generate code from an embedded resource Mustache template
-
-        // create a new file for protoc to write
         List<PluginProtos.CodeGeneratorResponse.File> protoFiles = new ArrayList<>();
         for(var protoFile : request.getProtoFileList()) {
             var fileOptions = protoFile.getOptions();
@@ -50,6 +43,7 @@ public class ORMGenerator extends Generator {
                             fileOptions.getJavaPackage() :
                             protoFile.getPackage());
 
+            System.out.println("javaPackage: " + javaPackage);
 
 
             var msgs = protoFile.getMessageTypeList();
@@ -61,12 +55,12 @@ public class ORMGenerator extends Generator {
                     continue;
                 }
 
-                var record = Record.create(javaPackage, msg);
+                var ctx = new EntityContext(javaPackage, msg, protoTypeMap);
 
-                String content = applyTemplate("record.mustache", record);
+                String content = applyTemplate("entity.mustache", ctx);
                 protoFiles.add(PluginProtos.CodeGeneratorResponse.File
                         .newBuilder()
-                        .setName(record.getJavaFile())
+                        .setName(ctx.getJavaFile())
                         .setContent(content)
                         .build());
             }
